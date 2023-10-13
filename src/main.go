@@ -37,7 +37,7 @@ func main() {
 				log.Println(err.Error())
 			}
 
-			c := make(chan string) // Common channel for all listener server threads
+			c := make(chan string) // Common channel for all listener server threads.
 
 			// Stand up web listeners
 			for _, i := range u.WebListeners {
