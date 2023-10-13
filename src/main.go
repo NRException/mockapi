@@ -9,6 +9,16 @@ import (
 	"text/tabwriter"
 )
 
+func printHelp() {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
+	fmt.Fprintln(w, "Command \t Purpose \t Example")
+	fmt.Fprintln(w, "-f\t Configuration input file location \t -f helloworld.yaml")
+	fmt.Fprintln(w, "-v\t Verbose logging flag \t -v")
+	fmt.Fprintln(w, "-l\t Log file path \t -l dir/helloworld.log")
+	w.Flush()
+	os.Exit(0)
+}
+
 func main() {
 	fmt.Println("--- Welcome to MockAPI ---")
 
@@ -18,18 +28,17 @@ func main() {
 
 	for i, arg := range os.Args {
 		if (arg == "-h") || (arg == "-help") || (arg == "--h") || (arg == "--help") {
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
-			fmt.Fprintln(w, "Command \t Purpose \t Example")
-			fmt.Fprintln(w, "-f\t Configuration input file location \t -f helloworld.yaml")
-			fmt.Fprintln(w, "-v\t Verbose logging flag \t -v")
-			fmt.Fprintln(w, "-l\t Log file path \t -l dir/helloworld.log")
-			w.Flush()
-			os.Exit(0)
+			printHelp()
 		}
 
+		// Input file handling...
 		if arg == "-f" {
 			log.Println("reading settings file...")
 			filePath := os.Args[i+1]
+
+			if len(filePath) == 0 {
+				printHelp()
+			}
 
 			u, err := settings.UnmarshalSettingsFile(filePath)
 
