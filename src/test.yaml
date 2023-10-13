@@ -1,0 +1,13 @@
+id: "https://json.schemastore.org/projektor.json"
+schema: "http://json-schema.org/draft-07/schema#"
+additionalProperties: false
+description: "Basic Schema borrowed from URL in schema field..."
+weblisteners:                         # N array of web listeners...
+  - listenername: "test"              # friendly name of the web listener
+    listenerport: 8080                # port to listen on
+    onconnectkeepalive: true          # whether or not to immediately close connection when response given.
+    contentheaders:                   # headers to return eg:
+      - headerKey: "content-type"
+        headerValue: "application/json"
+    contentresponse: 200              # return code to return with
+    contentbody: "{}"                 # text to actually serve in response body
