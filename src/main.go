@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"src/common"
 	"src/server"
 	"src/settings"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -19,47 +21,52 @@ func printHelp() {
 	os.Exit(0)
 }
 
+func handleListenersFromFile(filePath string) {
+	// Init...
+	common.LogVerbose("reading settings file...")
+	c := make(chan string)
+
+	// Simple sanity checks...
+	if len(filePath) == 0 {
+		printHelp()
+	}
+	if !strings.HasSuffix(filePath, ".yaml") {
+		printHelp()
+	}
+
+	// Attempt to unmarshal our data from our input file
+	u, err := settings.UnmarshalSettingsFile(filePath) 
+	common.LogVerbose(u.WebListeners)
+	if err != nil {
+		log.Println(err.Error())
+	}
+
+	// Stand up web listeners and listen
+	for _, i := range u.WebListeners {
+		go server.EstablishListener(i, c)
+	}
+	for l := range c {
+		log.Println(l)
+	}
+}
+
 func main() {
 	fmt.Println("--- Welcome to MockAPI ---")
 
+	// Ensure we have some calling arugments, or something being passed!
 	if len(os.Args) <= 1 {
 		fmt.Println("Please use the -h or --help switches for help.")
 	}
 
+	// Command line handling...
 	for i, arg := range os.Args {
 		if (arg == "-h") || (arg == "-help") || (arg == "--h") || (arg == "--help") {
 			printHelp()
 		}
 
-		// Input file handling...
 		if arg == "-f" {
-			log.Println("reading settings file...")
 			filePath := os.Args[i+1]
-
-			if len(filePath) == 0 {
-				printHelp()
-			}
-
-			u, err := settings.UnmarshalSettingsFile(filePath)
-
-			if err != nil {
-				log.Println(err.Error())
-			}
-
-			c := make(chan string) // Common channel for all listener server threads...
-
-			// Stand up web listeners
-			for _, i := range u.WebListeners {
-				go server.EstablishListener(i, c)
-			}
-
-			// Channel listen loop
-			for i := range c {
-				log.Println(i)
-			}
-
-			log.Println(u)
+			handleListenersFromFile(filePath)
 		}
 	}
-
 }

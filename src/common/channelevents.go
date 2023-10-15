@@ -1,4 +1,4 @@
-package channelevent
+package common
 
 import (
 	"strings"
@@ -12,12 +12,6 @@ const (
 	Message_Type_Error       string = "ERROR"
 )
 
-type GuidFormattedMessageSimple struct {
-	MessageIdentifier uuid.UUID
-	Message           string
-	MessageType       string
-}
-
 type GuidFormattedMessageError struct {
 	MessageIdentifier uuid.UUID
 	Message           string
@@ -28,12 +22,12 @@ type GuidFormattedMessageInfo struct {
 	Message           string
 }
 
-func SendChannelEventMessage(channel chan string, msg GuidFormattedMessageSimple) {
-	channel <- msg.MessageIdentifier.String() + " [" + msg.MessageType + "] - " + strings.ToLower(msg.Message)
-}
 func SendChannelEventInfo(channel chan string, msg GuidFormattedMessageInfo) {
 	channel <- msg.MessageIdentifier.String() + " [" + Message_Type_Information + "] - " + strings.ToLower(msg.Message)
 }
 func SendChannelEventError(channel chan string, msg GuidFormattedMessageError) {
 	channel <- msg.MessageIdentifier.String() + " [" + Message_Type_Error + "] - " + strings.ToLower(msg.Message)
+}
+func SendChannelEventErrorObj(channel chan string, msg GuidFormattedMessageError, err error) {
+	channel <- msg.MessageIdentifier.String() + " [" + Message_Type_Error + "] - " + strings.ToLower(msg.Message) + ":" + strings.ToLower(err.Error())
 }

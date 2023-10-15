@@ -2,12 +2,43 @@ id: "https://json.schemastore.org/projektor.json"
 schema: "http://json-schema.org/draft-07/schema#"
 additionalProperties: false
 description: "Basic Schema borrowed from URL in schema field..."
-weblisteners:                         # N array of web listeners...
-  - listenername: "test"              # friendly name of the web listener
-    listenerport: 8080                # port to listen on
-    onconnectkeepalive: true          # whether or not to immediately close connection when response given.
-    contentheaders:                   # headers to return eg:
-      - headerKey: "content-type"
-        headerValue: "application/json"
-    contentresponse: 200              # return code to return with
-    contentbody: "{}"                 # text to actually serve in response body
+weblisteners:                             # N array of web listeners...
+  - listenername: "test"                  # friendly name of the web listener
+    listenerport: 8080                    # port to listen on
+    onconnectkeepalive: true              # whether or not to immediately close connection when response given.
+    enabletls: false                      # enable tls on the listener?
+    certdetails:                          # if enabletls is equal to true, provide the paths to the cert and key...
+      certfile: cert.cer
+      keyfile: key.cer
+    contentbindings:                      # N array of static content bindings.
+      - bindingpath: "/"                  # "directory" to bind to.
+        responseheaders:                  # N array of headers to pass
+          - headerkey: "content-type"     # Header Key
+            headervalue: "text/plain"     # Header Value
+        responsecode: 200                 # Response code to return
+        responsebodytype: "static"        # Type of content to return. use "responsebody" to return static content. Possible values are "static", "proxy", and "file"
+        responsebody: "In root directory" # Body of response to return (if set to static)
+
+      - bindingpath: "/json"
+        responseheaders:
+          - headerkey: "content-type"
+            headervalue: "text/json"
+        responsecode: 200
+        responsebodytype: "file"          
+        responsebody: "test.json"
+      - bindingpath: "/xml"
+
+        responseheaders:
+          - headerkey: "content-type"
+            headervalue: "application/xml"
+        responsecode: 200
+        responsebodytype: "static"        
+        responsebody: "<thisisxml />"
+
+      - bindingpath: "/html"
+        responseheaders:
+          - headerkey: "content-type"
+            headervalue: "text/html"
+        responsebodytype: "static"        
+        responsecode: 200
+        responsebody: "<h1>thisishtml</h1>"
