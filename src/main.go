@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	co "mockapi/src/common"
-	"mockapi/src/server"
-	"mockapi/src/settings"
+	ser "mockapi/src/server"
+	se "mockapi/src/settings"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -35,13 +35,13 @@ func handleListenersFromFile(filePath string) error {
 	}
 
 	// Attempt to unmarshal our data from our input file
-	u, err := settings.UnmarshalSettingsFile(filePath) 
-	//common.LogVerbose(u.WebListeners)
+	u, err := se.UnmarshalSettingsFile(filePath) 
+
 	if err != nil {return fmt.Errorf("handleListenersFromFile: %w", err)}
 
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
-		go server.EstablishListener(i, c)
+		go ser.EstablishListener(i, c)
 	}
 	for l := range c {
 		log.Println(l)
