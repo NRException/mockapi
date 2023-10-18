@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	co "mockapi/src/common"
+	"mockapi/src/server"
+	"mockapi/src/settings"
 	"os"
-	"src/common"
-	"src/server"
-	"src/settings"
 	"strings"
 	"text/tabwriter"
 )
@@ -21,9 +21,9 @@ func printHelp() {
 	os.Exit(0)
 }
 
-func handleListenersFromFile(filePath string) {
+func handleListenersFromFile(filePath string) error {
 	// Init...
-	common.LogVerbose("reading settings file...")
+	co.LogVerbose("Reading settings file(s)...", co.MSGTYPE_INFO)
 	c := make(chan string)
 
 	// Simple sanity checks...
@@ -36,10 +36,8 @@ func handleListenersFromFile(filePath string) {
 
 	// Attempt to unmarshal our data from our input file
 	u, err := settings.UnmarshalSettingsFile(filePath) 
-	common.LogVerbose(u.WebListeners)
-	if err != nil {
-		log.Println(err.Error())
-	}
+	//common.LogVerbose(u.WebListeners)
+	if err != nil {return fmt.Errorf("handleListenersFromFile: %w", err)}
 
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
@@ -48,10 +46,23 @@ func handleListenersFromFile(filePath string) {
 	for l := range c {
 		log.Println(l)
 	}
+
+	return nil
 }
 
+var banner string = `
+
+                      ███╗   ███╗ ██████╗  ██████╗██╗  ██╗ █████╗ ██████╗ ██╗                      
+                      ████╗ ████║██╔═══██╗██╔════╝██║ ██╔╝██╔══██╗██╔══██╗██║                      
+█████╗█████╗█████╗    ██╔████╔██║██║   ██║██║     █████╔╝ ███████║██████╔╝██║    █████╗█████╗█████╗
+╚════╝╚════╝╚════╝    ██║╚██╔╝██║██║   ██║██║     ██╔═██╗ ██╔══██║██╔═══╝ ██║    ╚════╝╚════╝╚════╝
+                      ██║ ╚═╝ ██║╚██████╔╝╚██████╗██║  ██╗██║  ██║██║     ██║                      
+                      ╚═╝     ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝                      
+                                                                                                                                                                                     
+`
+
 func main() {
-	fmt.Println("--- Welcome to MockAPI ---")
+	fmt.Println(banner)
 
 	// Ensure we have some calling arugments, or something being passed!
 	if len(os.Args) <= 1 {
@@ -66,7 +77,8 @@ func main() {
 
 		if arg == "-f" {
 			filePath := os.Args[i+1]
-			handleListenersFromFile(filePath)
+			err := handleListenersFromFile(filePath)
+			if err != nil {log.Fatalf("main: %s", err)}
 		}
 	}
 }

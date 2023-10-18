@@ -3,35 +3,22 @@ package settings
 import (
 	"errors"
 	"fmt"
+	"log"
+	co "mockapi/src/common"
 	"os"
-	co "src/common"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
-
-type UnmarshalledRootSettingWebListenerHTTPSCertFiles struct {
-	CertFile string
-	KeyFile  string
-}
-func (re *UnmarshalledRootSettingWebListenerHTTPSCertFiles) ValidateCritical() error {
-	err := validateStringLength(re.CertFile, "CertFile")
-	if err != nil {return err}
-	err = validateStringLength(re.KeyFile, "KeyFile")
-	if err != nil {return err}
-
-	return nil
-}
 
 type UnmarshalledRootSettingWebListenerResponseHeaders struct {
 	HeaderKey   string
 	HeaderValue string
 }
-func (re UnmarshalledRootSettingWebListenerResponseHeaders) ValidateCritical() error {
-	err := validateStringLength(re.HeaderKey, "HeaderKey")
-	if err != nil {return err}
-	err = validateStringLength(re.HeaderValue, "KeaderValue")
-	if err != nil {return err}
-
+func (s *UnmarshalledRootSettingWebListenerResponseHeaders) Validate() error {
+	if len(s.HeaderKey) == 0 {return errors.New("UnmarshalledRootSettingWebListenerResponseHeaders.Validate(): HeaderKey in settings file must be present!")}
+	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettingWebListenerResponseHeaders.Validate() Evaluating \"%s\"...", s.HeaderKey), co.MSGTYPE_INFO)
+	if len(s.HeaderValue) == 0 {return errors.New("UnmarshalledRootSettingWebListenerResponseHeaders.Validate(): HeaderValue in settings file must be present!")}
 	return nil
 }
 
@@ -39,9 +26,10 @@ type UnmarshalledRootSettingWebListenerContentBodyType string
 func (re UnmarshalledRootSettingWebListenerContentBodyType) String() string {return string(re)}
 const (
 	CONST_RESPONSEBODYTYPE_FILE 	UnmarshalledRootSettingWebListenerContentBodyType = "file"
-	CONST_RESPONSEBODYTYPE_STATIC	UnmarshalledRootSettingWebListenerContentBodyType = "static"
+	CONST_RESPONSEBODYTYPE_INLINE	UnmarshalledRootSettingWebListenerContentBodyType = "inline"
 	CONST_RESPONSEBODYTYPE_PROXY	UnmarshalledRootSettingWebListenerContentBodyType = "proxy"
 )
+
 
 type UnmarshalledRootSettingWebListenerContentBinding struct {
 	BindingPath     string
@@ -50,120 +38,147 @@ type UnmarshalledRootSettingWebListenerContentBinding struct {
 	ResponseBody    string
 	ResponseBodyType UnmarshalledRootSettingWebListenerContentBodyType
 }
-func (re UnmarshalledRootSettingWebListenerContentBinding) ValidateCritical() error {
-	err := validateStringLength(re.ResponseBody, "ResponseBody")
-	if err != nil {return err}
-	err = validateIntGtZero(re.ResponseCode, "ResponseCode")
-	if err != nil {return err}
-	err = validateStringLength(re.BindingPath, "BindingPath")
-	if err != nil {return err}
-	err = validateStringLength(re.ResponseBodyType.String(), "ResponseBodyType")
-	if err != nil {return err}
+func (s *UnmarshalledRootSettingWebListenerContentBinding) Validate() error {
+	allowedResponseBodyTypes := []string{"inline", "file", "proxy"}
+	allowedFileTypes := []string{".json", ".txt", ".csv", ".html"}
 
-	for _, responseHeaders := range re.ResponseHeaders {
-		err := responseHeaders.ValidateCritical()
-		if err != nil {
-			return err
+	if len(s.BindingPath) == 0 {return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): BindingPath in settings file must be present!")}
+	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettingWebListenerContentBinding.Validate() Evaluating \"%s\"...", s.BindingPath), co.MSGTYPE_INFO)
+
+	// We might not want any headers...
+	if len(s.ResponseHeaders) > 0 {
+		for _, i:= range s.ResponseHeaders {
+			err := i.Validate()
+			if err != nil {return err}
 		}
 	}
 
+	if s.ResponseCode <= 0 {return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): Response code in settings file must be greater than 0")}
+	if len(s.ResponseBody) == 0 {return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): ResponseBody in settings file must be present!")}
+
+	// Check response body type matches allowed types defined above...
+	finds := 0
+	for _, i := range allowedResponseBodyTypes {
+		if s.ResponseBodyType.String() == i {finds++}
+		if finds > 0 {break}
+	}
+	if finds == 0 {
+		return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListenerContentBinding.Validate(): ResponseBodyType in settings file must be of the following supported values %s", allowedResponseBodyTypes))
+	}
+
+	if finds > 0 && s.ResponseBodyType.String() != "file" {return nil}
+
+	// And check the response body
+	finds = 0
+	for _, i := range allowedFileTypes {
+		if strings.HasSuffix(s.ResponseBody, i) {finds++}
+		if finds > 0 {break}
+	}
+	if finds == 0 {
+		return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListenerContentBinding.Validate(): ResponseBody in settings file must be of the following supported values %s OR a static value when conjoined with responsebodytype: inline", allowedFileTypes))
+	}
+	
 	return nil
 }
+
+type UnmarshalledRootSettingWebListenerHTTPSCertFiles struct {
+	CertFile string
+	KeyFile  string
+}
+func (s *UnmarshalledRootSettingWebListenerHTTPSCertFiles) Validate() error {
+	if len(s.CertFile) == 0 {return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListenerHTTPSCertFiles.Validate(): CertFile in settings file must be present!"))}
+	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettingWebListenerHTTPSCertFiles.Validate() Evaluating \"%s\"...", s.CertFile), co.MSGTYPE_INFO)
+	if len(s.KeyFile) == 0 {return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListenerHTTPSCertFiles.Validate(): KeyFile in settings file must be present!"))}
+	
+	// Check to see if files exist and are readable...
+	_, err := os.Stat(s.CertFile)
+	if err != nil {return fmt.Errorf("UnmarshalledRootSettingWebListenerHTTPSCertFiles.Validate(): Cert File does not exist or is not readable: %w", err)}
+	_, err = os.Stat(s.KeyFile)
+	if err != nil {return fmt.Errorf("UnmarshalledRootSettingWebListenerHTTPSCertFiles.Validate(): Key File does not exist or is not readable: %w", err)}
+
+	return nil
+}
+
 
 type UnmarshalledRootSettingWebListener struct {
 	ListenerName       string
 	ListenerPort       int
 	OnConnectKeepAlive bool
 	EnableTLS          bool
-	CertDetails        UnmarshalledRootSettingWebListenerHTTPSCertFiles
+	CertDetails        *UnmarshalledRootSettingWebListenerHTTPSCertFiles
 	ContentBindings    []UnmarshalledRootSettingWebListenerContentBinding
 }
-func (re *UnmarshalledRootSettingWebListener) ValidateCritical() error {
-	err := validateStringLength(re.ListenerName, "ListenerName")
-	if err != nil {return err}
-	err = validateIntGtZero(re.ListenerPort, "ListenerPort")
-	if err != nil {return err}
+func (s *UnmarshalledRootSettingWebListener) Validate() error {
+	if len(s.ListenerName) == 0 {return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListener.Validate(): ListenerName in settings file must be present!"))}
+	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettingWebListener.Validate() Evaluating \"%s\"...", s.ListenerName), co.MSGTYPE_INFO)
 
-	err = re.CertDetails.ValidateCritical()
-	if err != nil {return fmt.Errorf("UnmarshalledRootSettingWebListener.ValidateCritical: %w", err)}
+	if s.ListenerPort <= 0 {return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListener.Validate(): ListenerPort in settings file must be greater than 0"))}
 
-	for _, contentBindings := range re.ContentBindings {
-		err := contentBindings.ValidateCritical()
-		if err != nil {
-			return fmt.Errorf("UnmarshalledRootSettingWebListener.ValidateCritical: %w", err)
-		}
+	// Object is "nillable" as it's a ptr reference...
+	if s.CertDetails != nil {
+		err := s.CertDetails.Validate()
+		if err != nil {return fmt.Errorf("UnmarshalledRootSettingWebListener.Validate(): %w", err)}
+	}
+
+	for _, i := range s.ContentBindings {
+		err := i.Validate()
+		if err != nil {return fmt.Errorf("UnmarshalledRootSettingWebListener.Validate(): %w", err)}
 	}
 
 	return nil
 }
+
 
 type UnmarshalledRootSettings struct {
 	Id                   string
 	Schema               string
-	AdditionalProperties bool
 	Description          string
 	WebListeners         []UnmarshalledRootSettingWebListener
 }
-func (re *UnmarshalledRootSettings) ValidateCritical() error {
+func (s *UnmarshalledRootSettings) Validate() error {
+	if len(s.Id) == 0 {return errors.New("UnmarshalledRootSettings.Validate(): Id field in settings file must be present!")}
+	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettings.Validate() Evaluating \"%s\"...", s.Id), co.MSGTYPE_INFO)
 
-	if len(re.WebListeners) > 0 {
-		return errors.New("UnmarshalledRootSettings.ValidateCritical: webListeners field in settings must be present and must contain atleast one web listener array")
-	}
-
-	for _, webListenerStruct := range re.WebListeners {
-		err := webListenerStruct.ValidateCritical()
-		if err != nil {
-			return fmt.Errorf("UnmarshalledRootSettings.ValidateCritical: %w", err)
-		}
+	if len(s.Schema) == 0 {return errors.New("UnmarshalledRootSettings.Validate(): Schema field in settings file must be present!")}
+	if len(s.Description) == 0 {return errors.New("UnmarshalledRootSettings.Validate(): Schema field in settings file must be present!")}
+	if len(s.WebListeners) < 1 {return errors.New("UnmarshalledRootSettings.Validate(): WebListeners definition must be present and must have at least one valid entry!")}
+	
+	co.LogVerbose("UnmarshalSettingsFile() Validating web listeners...", co.MSGTYPE_INFO)
+	for _, i:=range s.WebListeners {
+		err := i.Validate()
+		if err != nil {return fmt.Errorf("UnmarshalledRootSettings.Validate(): %w", err)}
 	}
 
 	return nil
 }
 
-// Generic type validation funcs / methods
-var errorTemplateStringLength string = "%s field in settings file must be present and greater than 0 characters"
-var errorTemplateIntPositive string = "%s field in settings file must be present and greater than 0 characters"
-
-func validateStringLength(str string, varname string) error {
-	if len(str) <= 0 {
-		return fmt.Errorf("validateStringLength: %w", co.TemplateError(errorTemplateIntPositive, varname))
-	}
-	return nil
-}
-func validateIntGtZero(i int, varname string) error {
-	if i <= 0 {
-		return fmt.Errorf("validateIntGtZero: %w", co.TemplateError(errorTemplateIntPositive, varname))
-	}
-	return nil
-}
 
 // Base funcs / methods
 func UnmarshalSettingsFile(path string) (*UnmarshalledRootSettings, error) {
-	decodedSettings := UnmarshalledRootSettings{}
+	co.LogVerbose(fmt.Sprintf("UnmarshalSettingsFile() Unmarshalling settings file \"%s\"", path), co.MSGTYPE_INFO)
+	
+	var decodedSettings UnmarshalledRootSettings
 
 	// Read file and validate
 	b, err := os.ReadFile(path)
-
-	if err != nil {
-		return &decodedSettings, err
-	}
-	if len(b) == 0 {
-		return &decodedSettings, errors.New("settings file is empty")
-	}
+	if err != nil {return nil, err}
+	if len(b) == 0 {log.Fatalf("UnmarshalSettingsFile: %s file is read 0 bytes, it is likely empty.", err)}
 
 	// Unmarshal and validate
 	err = yaml.Unmarshal(b, &decodedSettings)
-
-	if err != nil {
-		return &decodedSettings, err
-	}
+	if err != nil {return nil, err}
 
 	// Validate struct critical datatypes...
-	decodedSettings.ValidateCritical()
-
+	co.LogVerbose("UnmarshalSettingsFile() Validating data structures...", co.MSGTYPE_INFO)
+	err = decodedSettings.Validate()
+	if err != nil {return nil, err}
+	
 	if err != nil {
-		return &decodedSettings, err
+		return nil, err
+	} else {
+		co.LogVerbose("UnmarshalSettingsFile() All data structures valid!", co.MSGTYPE_INFO)
 	}
+
 
 	return &decodedSettings, nil
 }
