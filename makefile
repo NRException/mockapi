@@ -12,7 +12,7 @@ run: compile
 	./${BUILD_DIR_REL}/${BINARYNAME}-lin -f build/test.yaml -v 
 
 test:
-	go run src/main.go -f build/test.yaml -v
+	go run src/main.go -f build/test.yaml
 clean: 
 	go clean
 	rm ${BUILD_DIR_REL}/${BINARYNAME}-*

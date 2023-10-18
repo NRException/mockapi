@@ -16,7 +16,7 @@ weblisteners:                             # N array of web listeners...
             headervalue: "text/plain"     # Header Value
         responsecode: 200                 # Response code to return
         responsebodytype: "inline"        # Type of content to return. use "responsebody" to return static content. Possible values are "static", "proxy", and "file"
-        responsebody: "You're in the root" # Body of response to return (if set to static)
+        responsebody: "You're in the root" # Body of response to return, can be a file if responsebodytype is set to "file"
 
       - bindingpath: "/json"
         responseheaders:
@@ -34,10 +34,26 @@ weblisteners:                             # N array of web listeners...
         responsebodytype: "inline"        
         responsebody: "<thisisxml />"
 
-      - bindingpath: "/html"
+      - bindingpath: "/txt"
+        responseheaders:
+          - headerkey: "content-type"
+            headervalue: "text/text"
+        responsebodytype: "file"        
+        responsecode: 200
+        responsebody: "build/test.txt"
+
+      - bindingpath: "/html-inline"
         responseheaders:
           - headerkey: "content-type"
             headervalue: "text/html"
         responsebodytype: "inline"        
         responsecode: 200
-        responsebody: "<h1>thisishtml</h1>"
+        responsebody: "<h1>This is in-line html</h1>"
+
+      - bindingpath: "/html"
+        responseheaders:
+          - headerkey: "content-type"
+            headervalue: "text/html"
+        responsebodytype: "file"        
+        responsecode: 200
+        responsebody: "build/test.html"
