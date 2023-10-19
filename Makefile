@@ -12,11 +12,12 @@ lint:
 	go fmt ./...
 
 test:
-	go run main.go -f build/test.yaml
-testh:
-	go run main.go -h
+	go test -v -race -covermode atomic ./...
+	@echo "all tests passed"
+
 testv:
 	go run main.go -f build/test.yaml -v
+
 testvw:
 	go run main.go -f build/test.yaml -v -w
 

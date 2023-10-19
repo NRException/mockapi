@@ -14,6 +14,8 @@ weblisteners:                             # N array of web listeners...
         responseheaders:                  # N array of headers to pass
           - headerkey: "content-type"     # Header Key
             headervalue: "text/plain"     # Header Value
+          #- headerkey: "test"
+          #  headervalue: "123"
         responsecode: 200                 # Response code to return
         responsebodytype: "inline"        # Type of content to return. use "responsebody" to return static content. Possible values are "static", "proxy", and "file"
         responsebody: "You're in the root" # Body of response to return, can be a file if responsebodytype is set to "file"
@@ -56,4 +58,4 @@ weblisteners:                             # N array of web listeners...
             headervalue: "text/html"
         responsebodytype: "file"        
         responsecode: 200
-        responsebody: "build/test.html"s
+        responsebody: "build/test.html"

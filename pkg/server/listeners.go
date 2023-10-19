@@ -12,11 +12,11 @@ import (
 	se "github.com/nrexception/mockapi/pkg/settings"
 )
 
-func getListenerContent(binding se.UnmarshalledRootSettingWebListenerContentBinding) (string, error) {
+func getListenerContent(binding se.ResponseBinding) (string, error) {
 	switch binding.ResponseBodyType {
-	case se.CONST_RESPONSEBODYTYPE_INLINE:
+	case se.Inline:
 		return binding.ResponseBody, nil
-	case se.CONST_RESPONSEBODYTYPE_FILE:
+	case se.File:
 		c, err := readFileContent(binding.ResponseBody)
 		if err != nil {
 			return "", fmt.Errorf("getListenerContent: %w", err)
@@ -26,27 +26,27 @@ func getListenerContent(binding se.UnmarshalledRootSettingWebListenerContentBind
 	return "", fmt.Errorf("getListenerContent(): response type does not match known type of inline, file or proxy.")
 }
 
-func createListenerBinding(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, binding se.UnmarshalledRootSettingWebListenerContentBinding, sMux *http.ServeMux, threaduuid uuid.UUID) error {
-	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("creating binding for %s", binding.BindingPath))
+func createListenerBinding(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, binding se.ResponseBinding, sMux *http.ServeMux, threaduuid uuid.UUID) error {
+	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("creating binding for %s", binding.Path))
 
-	sMux.HandleFunc(binding.BindingPath, func(w http.ResponseWriter, r *http.Request) {
-		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("\t binding \"%s\" got valid request from %s on %s. sending response...", binding.BindingPath, r.RemoteAddr, r.RequestURI))
+	sMux.HandleFunc(binding.Path, func(w http.ResponseWriter, r *http.Request) {
+		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("\t binding \"%s\" got valid request from %s on %s. sending response...", binding.Path, r.RemoteAddr, r.RequestURI))
 
 		// Add headers to response and write, along with response body
 		for _, h := range binding.ResponseHeaders {
-			w.Header().Add(h.HeaderKey, h.HeaderValue)
+			w.Header().Add(h.Key, h.Value)
 		}
 
 		w.WriteHeader(binding.ResponseCode)
 
 		// Handle and return body type
 		switch binding.ResponseBodyType {
-		case se.CONST_RESPONSEBODYTYPE_INLINE:
+		case se.Inline:
 			_, err := io.WriteString(w, binding.ResponseBody)
 			if err != nil {
 				return
 			}
-		case se.CONST_RESPONSEBODYTYPE_FILE:
+		case se.File:
 			lc, err := getListenerContent(binding)
 			if err != nil {
 				return
@@ -55,7 +55,7 @@ func createListenerBinding(commandChannel chan ListenerCommandPacket, responseCh
 			if err != nil {
 				return
 			}
-		case se.CONST_RESPONSEBODYTYPE_PROXY:
+		case se.Proxy:
 			// TODO: Add client proxy functionality
 		default:
 			return
@@ -69,7 +69,7 @@ func createListener(commandChannel chan ListenerCommandPacket, responseChannel c
 	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("configuring %d content bindings for \"%s\"", len(webListenerSettings.ContentBindings), webListenerSettings.ListenerName))
 
 	for _, binding := range webListenerSettings.ContentBindings {
-		binding := binding // Solve concurency issues by creating a copy of binding...
+		binding := binding                                                                       // Solve concurency issues by creating a copy of binding...
 		err := createListenerBinding(commandChannel, responseChannel, binding, sMux, threaduuid) // And call our bindings :)
 		if err != nil {
 			return fmt.Errorf("createListener: %w", err)
@@ -100,7 +100,7 @@ func createListener(commandChannel chan ListenerCommandPacket, responseChannel c
 				return nil
 			}
 		default:
-			time.Sleep(5*time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
@@ -121,7 +121,7 @@ func ClearAllListeners(commandChannel chan ListenerCommandPacket) {
 func EstablishListener(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, ls se.UnmarshalledRootSettingWebListener) error {
 	// Init some values...
 	threaduuid := uuid.New()
-	
+
 	// Actually start listening...
 	err := createListener(commandChannel, responseChannel, ls, sMux, threaduuid)
 	if err != nil {
