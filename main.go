@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	co "mockapi/src/common"
-	ser "mockapi/src/server"
-	se "mockapi/src/settings"
 	"os"
 	"strings"
 	"text/tabwriter"
+
+	co "github.com/nrexception/mockapi/pkg/common"
+	ser "github.com/nrexception/mockapi/pkg/server"
+	se "github.com/nrexception/mockapi/pkg/settings"
 )
 
 func printHelp() {
@@ -35,8 +36,10 @@ func handleListenersFromFile(filePath string) error {
 	}
 
 	// Attempt to unmarshal our data from our input file
-	u, err := se.UnmarshalSettingsFile(filePath) 
-	if err != nil {return fmt.Errorf("handleListenersFromFile: %w", err)}
+	u, err := se.UnmarshalSettingsFile(filePath)
+	if err != nil {
+		return fmt.Errorf("handleListenersFromFile: %w", err)
+	}
 
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
@@ -77,7 +80,9 @@ func main() {
 		if arg == "-f" {
 			filePath := os.Args[i+1]
 			err := handleListenersFromFile(filePath)
-			if err != nil {log.Fatalf("main: %s", err)}
+			if err != nil {
+				log.Fatalf("main: %s", err)
+			}
 		}
 	}
 }
