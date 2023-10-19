@@ -13,6 +13,9 @@ run: compile
 
 test:
 	go run src/main.go -f build/test.yaml
+testv:
+	go run src/main.go -f build/test.yaml -v
+
 clean: 
 	go clean
 	rm ${BUILD_DIR_REL}/${BINARYNAME}-*

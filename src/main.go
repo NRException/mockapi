@@ -24,7 +24,7 @@ func printHelp() {
 func handleListenersFromFile(filePath string) error {
 	// Init...
 	co.LogVerbose("Reading settings file(s)...", co.MSGTYPE_INFO)
-	c := make(chan string)
+	listenerChannel := make(chan string)
 
 	// Simple sanity checks...
 	if len(filePath) == 0 {
@@ -36,14 +36,13 @@ func handleListenersFromFile(filePath string) error {
 
 	// Attempt to unmarshal our data from our input file
 	u, err := se.UnmarshalSettingsFile(filePath) 
-
 	if err != nil {return fmt.Errorf("handleListenersFromFile: %w", err)}
 
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
-		go ser.EstablishListener(i, c)
+		go ser.EstablishListener(i, listenerChannel)
 	}
-	for l := range c {
+	for l := range listenerChannel {
 		log.Println(l)
 	}
 

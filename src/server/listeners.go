@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	co "mockapi/src/common"
@@ -19,14 +18,15 @@ func getListenerContent(binding se.UnmarshalledRootSettingWebListenerContentBind
 		return binding.ResponseBody, nil
 	case se.CONST_RESPONSEBODYTYPE_FILE:
 		c, err := readFileContent(binding.ResponseBody)
-		if err != nil {return "", fmt.Errorf("getListenerContent: %w", err)}
+		if err != nil {return "", fmt.Errorf("getListenerContent(): %w", err)}
 		return c, nil
 	}
-	return "", fmt.Errorf("getListenerContent: %w", errors.New("response type does not match known type of inline, file or proxy."))
+	return "", fmt.Errorf("getListenerContent(): response type does not match known type of inline, file or proxy.")
 }
 
 func createListenerBinding(binding se.UnmarshalledRootSettingWebListenerContentBinding, sMux *http.ServeMux, threaduuid uuid.UUID, l chan string) error {
 	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("creating binding for %s", binding.BindingPath))
+
 	sMux.HandleFunc(binding.BindingPath, func(w http.ResponseWriter, r *http.Request) {
 		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("\t binding \"%s\" got valid request from %s on %s. sending response...", binding.BindingPath, r.RemoteAddr, r.RequestURI))
 
@@ -53,6 +53,18 @@ func createListenerBinding(binding se.UnmarshalledRootSettingWebListenerContentB
 			return
 		}
 	})
+
+	// This code is correct, but it keeps the current thread busy... Need to look into a way of pulling this out of this func.
+	// fileListenerChannel := make(chan co.FileChangedEvent)
+
+	// if binding.ResponseBodyType == se.CONST_RESPONSEBODYTYPE_FILE {
+	// 	go co.WatchFile(binding.ResponseBody, fileListenerChannel)
+	// }
+
+	// for l := range fileListenerChannel {
+	// 	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("%s has changed...",l.FileName))
+	// }
+
 	return nil
 }
 
