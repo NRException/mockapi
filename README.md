@@ -14,7 +14,7 @@ MockAPI is intended to be simple to use and configure as it uses YAML as a confi
 
 MockAPI also limits the amount of third party golang libaries used, this is intended to keep the contributors(s) to the codebase from extending the feature-set beyond the intended scope of this project, in a simple manner of speaking "to keep it simple, stupid". This also has the added benefit of limiting potential supply chain attacks.
 
-As this program is written in go, it is platform agnostic. It is freely compabile with both BSD, linux and windows.
+As this program is written in go, it is platform agnostic. It is intended to be freely compabile with both BSD, linux and windows.
 
 ## Getting Started
 
@@ -60,21 +60,20 @@ make build
 ```
 
 ## Help
-
+Any bug reports, or insight required into unexpected behaviour should be logged with the -v (verbose) switch eg, as this will provide a full context of what the application is doing exactly.
+```bash
+./mockapi <switches> -v
+```
 <todo> </todo>
 
 ## Authors
-
 * [Cameron Huggett](https://github.com/NRException)
 * [Eric Wohltman](https://github.com/ewohltman)
 
 ## License
-
 This project is licensed under the GNU GENERAL PUBLIC license - see the LICENSE.md file for details
 
 ## Acknowledgments
-
-Inspiration, code snippets, etc.
 * [simple-readme](https://gist.github.com/DomPizzie/7a5ff55ffa9081f2de27c315f5018afc#file-readme-template-md) - For the readme you're currently reading
 * [go-yaml](https://github.com/go-yaml/yaml) - For yaml support
 * [go uuid](https://github.com/google/uuid) - For UUID generation
