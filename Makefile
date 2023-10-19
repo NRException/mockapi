@@ -13,6 +13,8 @@ lint:
 
 test:
 	go run main.go -f build/test.yaml
+testv:
+	go run main.go -f build/test.yaml -v
 
 build:
 	@echo Building all platforms...
