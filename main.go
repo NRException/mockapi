@@ -28,6 +28,7 @@ func handleListenersFromFile(filePath string, watchFile bool) error {
 	// Init...
 	co.LogVerbose("Reading settings file", co.MSGTYPE_INFO)
 	listenerChannel := make(chan string)
+	fileWatcherChannel := make(chan co.FileChangedEvent)
 
 	// Simple sanity checks...
 	if len(filePath) == 0 {
@@ -43,12 +44,24 @@ func handleListenersFromFile(filePath string, watchFile bool) error {
 		return fmt.Errorf("handleListenersFromFile: %w", err)
 	}
 
+	// If specified, watch our config file(s)
+	watcherEvent := co.FileChangedEvent{}
+	if watchFile {
+		go co.WatchFile(filePath, fileWatcherChannel)
+	}
+
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
 		go ser.EstablishListener(i, listenerChannel)
 	}
+
+	// Listen for listenerChannel responses, interrupt if the config file(s) change...
 	for l := range listenerChannel {
 		log.Println(l)
+
+
+		watcherEvent := <- fileWatcherChannel
+		log.Println(watcherEvent)
 	}
 
 	return nil
