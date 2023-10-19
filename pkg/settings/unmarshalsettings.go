@@ -48,7 +48,7 @@ type UnmarshalledRootSettingWebListenerContentBinding struct {
 
 func (s *UnmarshalledRootSettingWebListenerContentBinding) Validate() error {
 	allowedResponseBodyTypes := []string{"inline", "file", "proxy"}
-	allowedFileTypes := []string{".json", ".txt", ".csv", ".html"}
+	allowedFileTypes := []string{".json", ".txt", ".csv", ".html", ".xml"}
 
 	if len(s.BindingPath) == 0 {
 		return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): BindingPath in settings file must be present!")
