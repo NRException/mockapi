@@ -24,6 +24,12 @@ func printHelp() {
 	os.Exit(0)
 }
 
+func stub(ch chan co.FileChangedEvent) {
+	for l := range ch {
+		log.Println(l)
+	}
+}
+
 func handleListenersFromFile(filePath string, watchFile bool) error {
 	// Init...
 	co.LogVerbose("Reading settings file", co.MSGTYPE_INFO)
@@ -48,6 +54,7 @@ func handleListenersFromFile(filePath string, watchFile bool) error {
 	if watchFile {
 		go co.WatchFile(filePath, fileWatcherChannel)
 	}
+	go stub(fileWatcherChannel)
 
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
@@ -57,10 +64,6 @@ func handleListenersFromFile(filePath string, watchFile bool) error {
 	// Listen for listenerChannel responses, interrupt if the config file(s) change...
 	for l := range listenerChannel {
 		log.Println(l)
-
-
-		watcherEvent := <- fileWatcherChannel
-		log.Println(watcherEvent)
 	}
 
 	return nil
