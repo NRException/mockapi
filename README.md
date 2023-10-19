@@ -33,6 +33,7 @@ The make file will build this binary in portable format, you can run it from whe
 
 ```bash
 git clone https://github.com/NRException/MockAPI
+cd MockAPI
 ```
 * And build:
 ```bash
