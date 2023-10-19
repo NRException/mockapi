@@ -45,7 +45,6 @@ func handleListenersFromFile(filePath string, watchFile bool) error {
 	}
 
 	// If specified, watch our config file(s)
-	watcherEvent := co.FileChangedEvent{}
 	if watchFile {
 		go co.WatchFile(filePath, fileWatcherChannel)
 	}
