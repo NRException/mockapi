@@ -12,7 +12,7 @@ MockAPI is intended to be simple to use and configure as it uses YAML as a confi
 * ✅ File based content delivery from simple text based formats (currently; .html, .json, .xml, .txt and .csv data formats are supported).
 * ✅ KVP based header support in server responses. Return whatever you want in your headers!
 
-MockAPI also limits the amount of third party golang libaries used, this is intended to keep the contributors(s) to the codebase to not extend the feature-set beyond the intended scope of this project, in a simple manner of speaking "to keep it simple, stupid". This also has the added benefit of limiting potential supply chain attacks.
+MockAPI also limits the amount of third party golang libaries used, this is intended to keep the contributors(s) to the codebase from extending the feature-set beyond the intended scope of this project, in a simple manner of speaking "to keep it simple, stupid". This also has the added benefit of limiting potential supply chain attacks.
 
 As this program is written in go, it is platform agnostic. It is freely compabile with both BSD, linux and windows.
 
