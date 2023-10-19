@@ -3,7 +3,6 @@ package settings
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -217,7 +216,7 @@ func UnmarshalSettingsFile(path string) (*UnmarshalledRootSettings, error) {
 		return nil, err
 	}
 	if len(b) == 0 {
-		log.Fatalf("UnmarshalSettingsFile: %s file is read 0 bytes, it is likely empty.", err)
+		return nil, fmt.Errorf("UnmarshalSettingsFile: %s file is read 0 bytes, it is likely empty.", err)
 	}
 
 	// Unmarshal and validate

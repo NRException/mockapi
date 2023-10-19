@@ -17,10 +17,8 @@ const (
 )
 
 func LogVerbose(msg string, msgType LogMessageType) {
-	for _, verb := range os.Args {
-		if verb == "-v" {
-			log.Println("[" + msgType.String() + "] - " + msg)
-		}
+	if ArgSliceContains(os.Args, "-v") {
+		log.Println("[" + msgType.String() + "] - " + msg)
 	}
 }
 
