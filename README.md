@@ -44,10 +44,19 @@ make build
 
 ### Executing program
 
-* How to run the program
-* Step-by-step bullets
+* Help prompt:
 ```bash
-./mockapi -f <inputfile> -v(for verbose)
+./mockapi -h
+```
+
+* Run MockAPI from a single configuration file (non-verbose):
+```bash
+./mockapi -f <inputfile>
+```
+
+* Run MockAPI from a single configuration file (verbose):
+```bash
+./mockapi -f <inputfile> -v
 ```
 
 ## Help
@@ -56,9 +65,8 @@ make build
 
 ## Authors
 
-Contributors names and contact info:
-
-[@Cameron Huggett](https://github.com/NRException)
+* [Cameron Huggett](https://github.com/NRException)
+* [Eric Wohltman](https://github.com/ewohltman)
 
 ## License
 
