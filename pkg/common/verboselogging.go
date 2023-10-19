@@ -8,7 +8,9 @@ import (
 )
 
 type LogMessageType string
-func (re LogMessageType) String() string {return string(re)}
+
+func (re LogMessageType) String() string { return string(re) }
+
 const (
 	MSGTYPE_INFO LogMessageType = "INFO"
 	MSGTYPE_WARN LogMessageType = "WARNING"
@@ -27,9 +29,9 @@ func LogNonVerbose(msg string, msgType LogMessageType) {
 }
 
 func LogVerboseOnThread(uuid uuid.UUID, msgType LogMessageType, msg string) {
-	LogVerbose("[" + uuid.String() + "] - " + msg, msgType)
+	LogVerbose("["+uuid.String()+"] - "+msg, msgType)
 }
 
 func LogNonVerboseOnThread(uuid uuid.UUID, msgType LogMessageType, msg string) {
-	LogNonVerbose("[" + uuid.String() + "] - " + msg, msgType)
+	LogNonVerbose("["+uuid.String()+"] - "+msg, msgType)
 }

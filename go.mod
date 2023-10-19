@@ -1,4 +1,4 @@
-module mockapi
+module github.com/nrexception/mockapi
 
 go 1.21.3
 
