@@ -205,12 +205,13 @@ func (s *UnmarshalledRootSettings) Validate() error {
 }
 
 // Base funcs / methods
-func UnmarshalSettingsFile(path string) (*UnmarshalledRootSettings, error) {
+func UnmarshalSettingsFile(path string) (umrs *UnmarshalledRootSettings, err error) {
 	co.LogVerbose(fmt.Sprintf("UnmarshalSettingsFile() Unmarshalling settings file \"%s\"", path), co.MSGTYPE_INFO)
 
 	var decodedSettings UnmarshalledRootSettings
 
 	// Read file and validate
+	co.LogVerbose("UnmarshalSettingsFile() Reading file data...", co.MSGTYPE_INFO)
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -219,7 +220,11 @@ func UnmarshalSettingsFile(path string) (*UnmarshalledRootSettings, error) {
 		return nil, fmt.Errorf("UnmarshalSettingsFile: %s file is read 0 bytes, it is likely empty.", err)
 	}
 
+	co.LogVerbose(fmt.Sprintf("UnmarshalSettingsFile() file is %d bytes", len(b)), co.MSGTYPE_INFO)
+
 	// Unmarshal and validate
+
+	co.LogVerbose("UnmarshalSettingsFile() Unmarshalling bytes...", co.MSGTYPE_INFO)
 	err = yaml.Unmarshal(b, &decodedSettings)
 	if err != nil {
 		return nil, err

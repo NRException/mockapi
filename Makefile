@@ -13,6 +13,8 @@ lint:
 
 test:
 	go run main.go -f build/test.yaml
+testh:
+	go run main.go -h
 testv:
 	go run main.go -f build/test.yaml -v
 testvw:

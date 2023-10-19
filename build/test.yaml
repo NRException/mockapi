@@ -56,4 +56,4 @@ weblisteners:                             # N array of web listeners...
             headervalue: "text/html"
         responsebodytype: "file"        
         responsecode: 200
-        responsebody: "build/test.html"
+        responsebody: "build/test.html"s

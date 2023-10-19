@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 
 	co "github.com/nrexception/mockapi/pkg/common"
 	se "github.com/nrexception/mockapi/pkg/settings"
 )
-
-var GlobalListenerCount int = 0
 
 func getListenerContent(binding se.UnmarshalledRootSettingWebListenerContentBinding) (string, error) {
 	switch binding.ResponseBodyType {
@@ -27,7 +26,7 @@ func getListenerContent(binding se.UnmarshalledRootSettingWebListenerContentBind
 	return "", fmt.Errorf("getListenerContent(): response type does not match known type of inline, file or proxy.")
 }
 
-func createListenerBinding(binding se.UnmarshalledRootSettingWebListenerContentBinding, sMux *http.ServeMux, threaduuid uuid.UUID, l chan string) error {
+func createListenerBinding(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, binding se.UnmarshalledRootSettingWebListenerContentBinding, sMux *http.ServeMux, threaduuid uuid.UUID) error {
 	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("creating binding for %s", binding.BindingPath))
 
 	sMux.HandleFunc(binding.BindingPath, func(w http.ResponseWriter, r *http.Request) {
@@ -63,30 +62,21 @@ func createListenerBinding(binding se.UnmarshalledRootSettingWebListenerContentB
 		}
 	})
 
-	// This code is correct, but it keeps the current thread busy... Need to look into a way of pulling this out of this func.
-	// fileListenerChannel := make(chan co.FileChangedEvent)
-
-	// if binding.ResponseBodyType == se.CONST_RESPONSEBODYTYPE_FILE {
-	// 	go co.WatchFile(binding.ResponseBody, fileListenerChannel)
-	// }
-
-	// for l := range fileListenerChannel {
-	// 	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("%s has changed...",l.FileName))
-	// }
-
 	return nil
 }
 
-func createListener(webListenerSettings se.UnmarshalledRootSettingWebListener, sMux *http.ServeMux, threaduuid uuid.UUID, l chan string) error {
+func createListener(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, webListenerSettings se.UnmarshalledRootSettingWebListener, sMux *http.ServeMux, threaduuid uuid.UUID) error {
 	co.LogVerboseOnThread(threaduuid, co.MSGTYPE_INFO, fmt.Sprintf("configuring %d content bindings for \"%s\"", len(webListenerSettings.ContentBindings), webListenerSettings.ListenerName))
 
 	for _, binding := range webListenerSettings.ContentBindings {
-		binding := binding                                         // Solve concurency issues by creating a copy of binding...
-		err := createListenerBinding(binding, sMux, threaduuid, l) // And call our bindings :)
+		binding := binding // Solve concurency issues by creating a copy of binding...
+		err := createListenerBinding(commandChannel, responseChannel, binding, sMux, threaduuid) // And call our bindings :)
 		if err != nil {
 			return fmt.Errorf("createListener: %w", err)
 		}
 	}
+
+	listenerRegister = append(listenerRegister, threaduuid) // Append our thread uuid for later reference if we need to close it...
 
 	if webListenerSettings.EnableTLS {
 		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, "starting tls listener...")
@@ -96,23 +86,44 @@ func createListener(webListenerSettings se.UnmarshalledRootSettingWebListener, s
 		}
 	} else {
 		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, "starting non-tls listener...")
-		err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", webListenerSettings.ListenerPort), sMux)
-		if err != nil {
-			return fmt.Errorf("createListener: %w", err)
-		}
+		go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", webListenerSettings.ListenerPort), sMux)
+		// if err != nil {
+		// 	return fmt.Errorf("createListener: %w", err)
+		// }
 	}
 
-	return nil
+	// Hang the go routine unless we close it...
+	for {
+		select {
+		case c := <-commandChannel:
+			if threaduuid == uuid.UUID(c.Identifier) && c.Command == VLC_Close {
+				return nil
+			}
+		default:
+			time.Sleep(5*time.Second)
+		}
+	}
 }
 
-func EstablishListener(ls se.UnmarshalledRootSettingWebListener, l chan string) error {
-	// Init some values...
-	GlobalListenerCount += 1
-	threaduuid := uuid.New()
-	sMux := http.NewServeMux()
+var sMux = http.NewServeMux()
+var listenerRegister []uuid.UUID
 
+func ClearAllListeners(commandChannel chan ListenerCommandPacket) {
+	co.LogVerbose("Closing all listener threads...", co.MSGTYPE_WARN)
+	for _, thread := range listenerRegister {
+		co.LogVerbose(fmt.Sprintf("Closing listener thread %s...", thread), co.MSGTYPE_WARN)
+		commandChannel <- ListenerCommandPacket{Identifier: uuid.UUID(thread), Command: VLC_Close}
+	}
+	co.LogVerbose("Refreshing server Mux...", co.MSGTYPE_WARN)
+	sMux = http.NewServeMux()
+}
+
+func EstablishListener(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, ls se.UnmarshalledRootSettingWebListener) error {
+	// Init some values...
+	threaduuid := uuid.New()
+	
 	// Actually start listening...
-	err := createListener(ls, sMux, threaduuid, l)
+	err := createListener(commandChannel, responseChannel, ls, sMux, threaduuid)
 	if err != nil {
 		return fmt.Errorf("EstablishListener: %w", err)
 	}

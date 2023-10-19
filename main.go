@@ -24,17 +24,17 @@ func printHelp() {
 	os.Exit(0)
 }
 
-func stub(ch chan co.FileChangedEvent) {
-	for l := range ch {
-		log.Println(l)
+func handleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) {
+	for l := range fileEventChannel {
+		co.LogVerbose(fmt.Sprintf("Config file \"%s\" was changed. Was: %s is: %s", l.FileName, l.FileHashBeforeChange, l.FileHashAfterChange), co.MSGTYPE_WARN)
+		ser.ClearAllListeners(listenerCommandChannel)
+		handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, filePath) 
 	}
 }
 
-func handleListenersFromFile(filePath string, watchFile bool) error {
+func handleListenersFromFile(listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
 	// Init...
 	co.LogVerbose("Reading settings file", co.MSGTYPE_INFO)
-	listenerChannel := make(chan string)
-	fileWatcherChannel := make(chan co.FileChangedEvent)
 
 	// Simple sanity checks...
 	if len(filePath) == 0 {
@@ -50,20 +50,9 @@ func handleListenersFromFile(filePath string, watchFile bool) error {
 		return fmt.Errorf("handleListenersFromFile: %w", err)
 	}
 
-	// If specified, watch our config file(s)
-	if watchFile {
-		go co.WatchFile(filePath, fileWatcherChannel)
-	}
-	go stub(fileWatcherChannel)
-
 	// Stand up web listeners and listen
 	for _, i := range u.WebListeners {
-		go ser.EstablishListener(i, listenerChannel)
-	}
-
-	// Listen for listenerChannel responses, interrupt if the config file(s) change...
-	for l := range listenerChannel {
-		log.Println(l)
+		go ser.EstablishListener(listenerCommandChannel, listenerResponseChannel, i)
 	}
 
 	return nil
@@ -96,10 +85,27 @@ func main() {
 	// Handle -f
 	m, params := co.ArgSliceSwitchParameters(os.Args, "-f")
 	if (m) {
+		fileWatcherChannel := make(chan co.FileChangedEvent)
+		listenerCommandChannel := make(chan ser.ListenerCommandPacket)
+		listenerResponseChannel := make(chan ser.ListenerResponse)
+
+		// If specified, watch our config file(s), reload them if needed...
+		if watchConfigFile {
+			go co.WatchFile(params[0], fileWatcherChannel, false)
+		}
+		go handleConfigFileRefresh(fileWatcherChannel, listenerCommandChannel, listenerResponseChannel, params[0])
+
 		// Takes first member of slice for now... Will change this when adding multiple file support...
-		err := handleListenersFromFile(params[0], watchConfigFile)
+		err := handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, params[0])
 		if err != nil {
-			log.Fatalf("main: %s", err)
+			log.Fatalf("main(): %s", err)
+		}
+
+		// And output out listeners channel!
+		for listenResponse := range listenerResponseChannel {
+			log.Println(listenResponse)
 		}
 	}
+
+
 }
