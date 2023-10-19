@@ -60,7 +60,7 @@ make build
 ```
 
 ## Help
-Any bug reports, or insight required into unexpected behaviour should be logged with the -v (verbose) switch eg, as this will provide a full context of what the application is doing exactly.
+Any bug reports, or insight required into unexpected behaviour should be logged with the -v (verbose) switch as this will provide a full context of what the application is doing exactly. eg:
 ```bash
 ./mockapi <switches> -v
 ```
