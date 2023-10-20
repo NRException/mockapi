@@ -33,30 +33,27 @@ func generateHash(filePath string) (hash string, err error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-
 func WatchFile(filePath string, eventChannel chan FileChangedEvent, quitOnDetect bool) (err error) {
-	LogVerbose(fmt.Sprintf("Watching file \"%s\"...", filePath),MSGTYPE_INFO)
-
-	defer func() {LogVerbose(fmt.Sprintf("Closing file watcher for \"%s\"...", filePath),MSGTYPE_INFO)}()
+	LogVerbose(fmt.Sprintf("Watching file \"%s\"...", filePath), MSGTYPE_INFO)
+	defer func() { LogVerbose(fmt.Sprintf("Closing file watcher for \"%s\"...", filePath), MSGTYPE_INFO) }()
 
 	stat, err := os.Stat(filePath)
-
 	if err != nil {
 		return fmt.Errorf("WatchFile(): %w", err)
 	}
+
 	if stat.Size() <= 0 {
 		return errors.New("WatchFile(): file is 0 bytes")
 	}
 
-	finishedWatching := false
-	sleepInterval := 1 * time.Second
+	sleepInterval := time.Second
 
 	lastFileHash, err := generateHash(filePath)
 	if err != nil {
 		return fmt.Errorf("WatchFile(): %w", err)
 	}
 
-	for !finishedWatching {
+	for {
 		currentFileHash, err := generateHash(filePath)
 		if err != nil {
 			return fmt.Errorf("WatchFile(): %w", err)
@@ -65,10 +62,14 @@ func WatchFile(filePath string, eventChannel chan FileChangedEvent, quitOnDetect
 		if currentFileHash != lastFileHash {
 			eventChannel <- FileChangedEvent{FileName: filePath, FileHashBeforeChange: lastFileHash, FileHashAfterChange: currentFileHash}
 			lastFileHash = currentFileHash
-			if quitOnDetect == true {finishedWatching = true}
+
+			if quitOnDetect == true {
+				break
+			}
 		}
 
-		time.Sleep(time.Duration(sleepInterval))
+		time.Sleep(sleepInterval)
 	}
+
 	return nil
 }
