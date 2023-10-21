@@ -21,9 +21,11 @@ func getListenerContent(binding se.ResponseBinding) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("getListenerContent: %w", err)
 		}
+
 		return c, nil
 	}
-	return "", fmt.Errorf("getListenerContent(): response type does not match known type of inline, file or proxy.")
+
+	return "", fmt.Errorf("getListenerContent(): response type does not match known type of inline, file or proxy")
 }
 
 func createListenerBinding(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, binding se.ResponseBinding, sMux *http.ServeMux, threaduuid uuid.UUID) error {
@@ -110,12 +112,15 @@ var listenerRegister []uuid.UUID
 
 func ClearAllListeners(commandChannel chan ListenerCommandPacket) {
 	co.LogVerbose("Closing all listener threads...", co.MSGTYPE_WARN)
+
 	for _, thread := range listenerRegister {
 		co.LogVerbose(fmt.Sprintf("Closing listener thread %s...", thread), co.MSGTYPE_WARN)
 		commandChannel <- ListenerCommandPacket{Identifier: uuid.UUID(thread), Command: VLC_Close}
 	}
+
 	co.LogVerbose("Refreshing server Mux...", co.MSGTYPE_WARN)
-	sMux = http.NewServeMux()
+
+	*sMux = *http.NewServeMux()
 }
 
 func EstablishListener(commandChannel chan ListenerCommandPacket, responseChannel chan ListenerResponse, ls se.UnmarshalledRootSettingWebListener) error {
