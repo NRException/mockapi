@@ -28,7 +28,7 @@ func handleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listener
 	for l := range fileEventChannel {
 		co.LogVerbose(fmt.Sprintf("Config file \"%s\" was changed. Was: %s is: %s", l.FileName, l.FileHashBeforeChange, l.FileHashAfterChange), co.MSGTYPE_WARN)
 		ser.ClearAllListeners(listenerCommandChannel)
-		handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, filePath) 
+		handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, filePath)
 	}
 }
 
@@ -71,7 +71,7 @@ var banner string = `
 
 func main() {
 	fmt.Println(banner)
-	
+
 	// Ensure we have some calling arugments, or something being passed!
 	if len(os.Args) <= 0 {
 		fmt.Println("Please use the -h or --help switches for help.")
@@ -80,11 +80,13 @@ func main() {
 
 	// Handle global arguments
 	watchConfigFile := co.ArgSliceContains(os.Args, "-w") // Defines if we expect the config file(s) to dynamically update the configuration of the listeners etc.
-	if co.ArgSliceContainsInTerms(os.Args, []string{"-h","-help","--h","--help"}) {printHelp()} // Prints help if we need it :)
+	if co.ArgSliceContainsInTerms(os.Args, []string{"-h", "-help", "--h", "--help"}) {
+		printHelp()
+	} // Prints help if we need it :)
 
 	// Handle -f
 	m, params := co.ArgSliceSwitchParameters(os.Args, "-f")
-	if (m) {
+	if m {
 		fileWatcherChannel := make(chan co.FileChangedEvent)
 		listenerCommandChannel := make(chan ser.ListenerCommandPacket)
 		listenerResponseChannel := make(chan ser.ListenerResponse)
@@ -106,6 +108,4 @@ func main() {
 			log.Println(listenResponse)
 		}
 	}
-
-
 }

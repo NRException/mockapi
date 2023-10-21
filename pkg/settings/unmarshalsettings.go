@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -11,52 +12,52 @@ import (
 	co "github.com/nrexception/mockapi/pkg/common"
 )
 
-type UnmarshalledRootSettingWebListenerResponseHeaders struct {
-	HeaderKey   string
-	HeaderValue string
+type ResponseHeader struct {
+	Key   string `yaml:"headerkey"`
+	Value string `yaml:"headervalue"`
 }
 
-func (s *UnmarshalledRootSettingWebListenerResponseHeaders) Validate() error {
-	if len(s.HeaderKey) == 0 {
-		return errors.New("UnmarshalledRootSettingWebListenerResponseHeaders.Validate(): HeaderKey in settings file must be present!")
+func (header *ResponseHeader) Validate() error {
+	if header.Key == "" {
+		return fmt.Errorf("header key must be defined")
 	}
-	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettingWebListenerResponseHeaders.Validate() Evaluating \"%s\"...", s.HeaderKey), co.MSGTYPE_INFO)
-	if len(s.HeaderValue) == 0 {
-		return errors.New("UnmarshalledRootSettingWebListenerResponseHeaders.Validate(): HeaderValue in settings file must be present!")
+
+	if header.Value == "" {
+		return fmt.Errorf("header value must be defined")
 	}
+
 	return nil
 }
 
-type UnmarshalledRootSettingWebListenerContentBodyType string
-
-func (re UnmarshalledRootSettingWebListenerContentBodyType) String() string { return string(re) }
-
 const (
-	CONST_RESPONSEBODYTYPE_FILE   UnmarshalledRootSettingWebListenerContentBodyType = "file"
-	CONST_RESPONSEBODYTYPE_INLINE UnmarshalledRootSettingWebListenerContentBodyType = "inline"
-	CONST_RESPONSEBODYTYPE_PROXY  UnmarshalledRootSettingWebListenerContentBodyType = "proxy"
+	File   BodyType = "file"
+	Inline BodyType = "inline"
+	Proxy  BodyType = "proxy"
 )
 
-type UnmarshalledRootSettingWebListenerContentBinding struct {
-	BindingPath      string
-	ResponseHeaders  []UnmarshalledRootSettingWebListenerResponseHeaders
-	ResponseCode     int
-	ResponseBody     string
-	ResponseBodyType UnmarshalledRootSettingWebListenerContentBodyType
+type BodyType string
+
+func (bodyType BodyType) String() string { return string(bodyType) }
+
+type ResponseBinding struct {
+	Path             string           `yaml:"bindingpath"`
+	ResponseHeaders  []ResponseHeader `yaml:"responseheaders"`
+	ResponseCode     int              `yaml:"responsecode"`
+	ResponseBody     string           `yaml:"responsebody"`
+	ResponseBodyType BodyType         `yaml:"responsebodytype"`
 }
 
-func (s *UnmarshalledRootSettingWebListenerContentBinding) Validate() error {
-	allowedResponseBodyTypes := []string{"inline", "file", "proxy"}
+func (binding *ResponseBinding) Validate() error {
+	allowedResponseBodyTypes := []BodyType{File, Inline, Proxy}
 	allowedFileTypes := []string{".json", ".txt", ".csv", ".html", ".xml"}
 
-	if len(s.BindingPath) == 0 {
-		return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): BindingPath in settings file must be present!")
+	if binding.Path == "" {
+		return fmt.Errorf("binding path must be defined")
 	}
-	co.LogVerbose(fmt.Sprintf("UnmarshalledRootSettingWebListenerContentBinding.Validate() Evaluating \"%s\"...", s.BindingPath), co.MSGTYPE_INFO)
 
 	// We might not want any headers...
-	if len(s.ResponseHeaders) > 0 {
-		for _, i := range s.ResponseHeaders {
+	if len(binding.ResponseHeaders) > 0 {
+		for _, i := range binding.ResponseHeaders {
 			err := i.Validate()
 			if err != nil {
 				return err
@@ -64,43 +65,33 @@ func (s *UnmarshalledRootSettingWebListenerContentBinding) Validate() error {
 		}
 	}
 
-	if s.ResponseCode <= 0 {
-		return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): Response code in settings file must be greater than 0")
-	}
-	if len(s.ResponseBody) == 0 {
-		return errors.New("UnmarshalledRootSettingWebListenerContentBinding.Validate(): ResponseBody in settings file must be present!")
+	if binding.ResponseCode <= 100 {
+		return fmt.Errorf("invalid response code: %d", binding.ResponseCode)
 	}
 
-	// Check response body type matches allowed types defined above...
-	finds := 0
-	for _, i := range allowedResponseBodyTypes {
-		if s.ResponseBodyType.String() == i {
-			finds++
-		}
-		if finds > 0 {
-			break
-		}
-	}
-	if finds == 0 {
-		return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListenerContentBinding.Validate(): ResponseBodyType in settings file must be of the following supported values %s", allowedResponseBodyTypes))
+	// TODO: response body could be empty
+	if binding.ResponseBody == "" {
+		return fmt.Errorf("invalid response body: %s", binding.ResponseBody)
 	}
 
-	if finds > 0 && s.ResponseBodyType.String() != "file" {
+	if !slices.Contains(allowedResponseBodyTypes, binding.ResponseBodyType) {
+		return fmt.Errorf("invalid response body type: %s", binding.ResponseBodyType)
+	}
+
+	if binding.ResponseBodyType != File {
 		return nil
 	}
 
-	// And check the response body
-	finds = 0
-	for _, i := range allowedFileTypes {
-		if strings.HasSuffix(s.ResponseBody, i) {
-			finds++
+	isValidFileType := slices.ContainsFunc(allowedFileTypes, func(fileExtension string) bool {
+		if strings.HasSuffix(binding.ResponseBody, fileExtension) {
+			return true
 		}
-		if finds > 0 {
-			break
-		}
-	}
-	if finds == 0 {
-		return errors.New(fmt.Sprintf("UnmarshalledRootSettingWebListenerContentBinding.Validate(): ResponseBody in settings file must be of the following supported values %s OR a static value when conjoined with responsebodytype: inline", allowedFileTypes))
+
+		return false
+	})
+
+	if !isValidFileType {
+		return fmt.Errorf("invalid response body file type: %s", binding.ResponseBody)
 	}
 
 	return nil
@@ -139,7 +130,7 @@ type UnmarshalledRootSettingWebListener struct {
 	OnConnectKeepAlive bool
 	EnableTLS          bool
 	CertDetails        *UnmarshalledRootSettingWebListenerHTTPSCertFiles
-	ContentBindings    []UnmarshalledRootSettingWebListenerContentBinding
+	ContentBindings    []ResponseBinding
 }
 
 func (s *UnmarshalledRootSettingWebListener) Validate() error {
@@ -227,21 +218,17 @@ func UnmarshalSettingsFile(path string) (umrs *UnmarshalledRootSettings, err err
 	co.LogVerbose("UnmarshalSettingsFile() Unmarshalling bytes...", co.MSGTYPE_INFO)
 	err = yaml.Unmarshal(b, &decodedSettings)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error unmarshaling file contents: %w", err)
 	}
 
 	// Validate struct critical datatypes...
 	co.LogVerbose("UnmarshalSettingsFile() Validating data structures...", co.MSGTYPE_INFO)
 	err = decodedSettings.Validate()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error validating yaml file: %w", err)
 	}
 
-	if err != nil {
-		return nil, err
-	} else {
-		co.LogVerbose("UnmarshalSettingsFile() All data structures valid!", co.MSGTYPE_INFO)
-	}
+	co.LogVerbose("UnmarshalSettingsFile() All data structures valid!", co.MSGTYPE_INFO)
 
 	return &decodedSettings, nil
 }
