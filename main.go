@@ -91,8 +91,9 @@ func run() error {
 	fmt.Print(banner)
 
 	// Ensure we have some calling arugments, or something being passed!
-	if len(os.Args) <= 0 {
-		return fmt.Errorf("please use the -h or --help switches for help")
+	if len(os.Args) <= 1 {
+		fmt.Println("Please use the -h or --help switches for help")
+		os.Exit(1)
 	}
 
 	if co.ArgSliceContainsInTerms(os.Args, []string{"-h", "-help", "--h", "--help"}) {
