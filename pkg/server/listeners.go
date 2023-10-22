@@ -82,16 +82,10 @@ func createListener(commandChannel chan ListenerCommandPacket, responseChannel c
 
 	if webListenerSettings.EnableTLS {
 		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, "starting tls listener...")
-		err := http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%d", webListenerSettings.ListenerPort), webListenerSettings.CertDetails.CertFile, webListenerSettings.CertDetails.KeyFile, sMux)
-		if err != nil {
-			return fmt.Errorf("createListener: %w", err)
-		}
+		go http.ListenAndServeTLS(fmt.Sprintf("0.0.0.0:%d", webListenerSettings.ListenerPort), webListenerSettings.CertDetails.CertFile, webListenerSettings.CertDetails.KeyFile, sMux)
 	} else {
 		co.LogNonVerboseOnThread(threaduuid, co.MSGTYPE_INFO, "starting non-tls listener...")
 		go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", webListenerSettings.ListenerPort), sMux)
-		// if err != nil {
-		// 	return fmt.Errorf("createListener: %w", err)
-		// }
 	}
 
 	// Hang the go routine unless we close it...

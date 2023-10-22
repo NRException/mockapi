@@ -96,16 +96,26 @@ func run() error {
 		os.Exit(1)
 	}
 
+	// Handle global switches
+	watchConfigFile := co.ArgSliceContains(os.Args, "-w") // Defines if we expect the config file(s) to dynamically update the configuration of the listeners etc.
+
+	// Handle -h
 	if co.ArgSliceContainsInTerms(os.Args, []string{"-h", "-help", "--h", "--help"}) {
 		printHelp()
 		return nil
-	} // Prints help if we need it :)
+	}
 
-	// Handle global arguments
-	watchConfigFile := co.ArgSliceContains(os.Args, "-w") // Defines if we expect the config file(s) to dynamically update the configuration of the listeners etc.
+	// Handle -l log file location
+	m, params := co.ArgSliceSwitchParameters(os.Args, "-l")
+	if len(params) > 1 {
+		return fmt.Errorf("Only one log file location is supported at the moment")
+	}
+	if m {
+		co.SetLogFileActive(params[0])
+	}
 
-	// Handle -f
-	m, params := co.ArgSliceSwitchParameters(os.Args, "-f")
+	// Handle -f file inputs
+	m, params = co.ArgSliceSwitchParameters(os.Args, "-f")
 	if m {
 		fileWatcherChannel := make(chan co.FileChangedEvent)
 		listenerCommandChannel := make(chan ser.ListenerCommandPacket)
