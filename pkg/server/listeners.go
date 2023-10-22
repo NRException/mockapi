@@ -113,9 +113,10 @@ var listenerRegister []uuid.UUID
 func ClearAllListeners(commandChannel chan ListenerCommandPacket) {
 	co.LogVerbose("Closing all listener threads...", co.MSGTYPE_WARN)
 
-	for _, thread := range listenerRegister {
+	for i, thread := range listenerRegister {
 		co.LogVerbose(fmt.Sprintf("Closing listener thread %s...", thread), co.MSGTYPE_WARN)
 		commandChannel <- ListenerCommandPacket{Identifier: uuid.UUID(thread), Command: VLC_Close}
+		listenerRegister[i] = listenerRegister[i-1]
 	}
 
 	co.LogVerbose("Refreshing server Mux...", co.MSGTYPE_WARN)
