@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/nrexception/mockapi/pkg/settings"
+	"github.com/nrexception/mockapi/internal/settings"
 )
 
 func TestResponseHeaders_Validate(t *testing.T) {

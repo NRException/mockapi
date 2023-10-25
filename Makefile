@@ -8,8 +8,13 @@ clean:
 	rm -rf ${BUILD_DIR}/linux
 	rm -rf ${BUILD_DIR}/windows
 
+fmt:
+	gofmt -s -w .
+	gci write --skip-generated -s standard -s default -s 'prefix(github.com/nrexception/mockapi)' .
+	go mod tidy
+
 lint:
-	go fmt ./...
+	golangci-lint run ./...
 
 test:
 	go test -v -race -covermode atomic ./...

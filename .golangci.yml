@@ -1,0 +1,84 @@
+---
+linters-settings:
+  cyclop:
+    max-complexity: 15
+    package-average: 0.0
+    skip-tests: true
+  dupl:
+    threshold: 100
+  funlen:
+    lines: 100
+    statements: 50
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/nrexception/mockapi)
+    custom-order: true
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  gocyclo:
+    min-complexity: 15
+  goimports:
+    local-prefixes: github.com/nrexception/mockapi
+  golint:
+    min-confidence: 0.8
+  govet:
+    check-shadowing: true
+  lll:
+    line-length: 140
+  maligned:
+    suggest-new: true
+  misspell:
+    locale: US
+
+linters:
+  enable-all: true
+  disable:
+    - deadcode
+    - depguard
+    - exhaustivestruct
+    - forbidigo
+    - godox # TODO: Remove me, this is useful for TODOs
+    - goerr113
+    - gofumpt
+    - golint
+    - ifshort
+    - interfacer
+    - maligned
+    - nosnakecase
+    - scopelint
+    - structcheck
+    - tagliatelle
+    - varcheck
+    - varnamelen
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - .github
+    - build
+    - web
+
+issues:
+  max-same-issues: 0
+  exclude-use-default: false
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - bodyclose
+        - cyclop
+        - dupl
+        - errcheck
+        - errchkjson
+        - forcetypeassert
+        - gocyclo
+        - gosec

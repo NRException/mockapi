@@ -1,17 +1,21 @@
+// Package main is the entry point of the program.
 package main
 
 import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 	"text/tabwriter"
 
-	co "github.com/nrexception/mockapi/pkg/common"
-	ser "github.com/nrexception/mockapi/pkg/server"
-	se "github.com/nrexception/mockapi/pkg/settings"
+	"github.com/nrexception/mockapi/internal/filewatcher"
+	"github.com/nrexception/mockapi/internal/logging"
+	"github.com/nrexception/mockapi/internal/server"
+	"github.com/nrexception/mockapi/internal/settings"
 )
 
+//nolint:lll // banner is necessarily a long line
 const banner string = `
 
                       ███╗   ███╗ ██████╗  ██████╗██╗  ██╗ █████╗ ██████╗ ██╗                      
@@ -26,25 +30,31 @@ const banner string = `
 func printHelp() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 
-	_, _ = fmt.Fprintln(w, "Simple usage example: ./mockapi -f config.yaml")
+	_, _ = fmt.Fprintln(w, "Simple usage example: ./mockapi -v -w -f config.yaml")
 	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "Command\tPurpose\tExample")
-	_, _ = fmt.Fprintln(w, "-f\tConfiguration input file location\t./mockapi -f <filepath>")
-	_, _ = fmt.Fprintln(w, "-v\tVerbose logging flag\t./mockapi -f <filepath> -v")
-	_, _ = fmt.Fprintln(w, "-w\tWatch config file(s) provided by -f, re-apply their configuration if they are changed\t./mockapi -f <filepath> -w")
+	_, _ = fmt.Fprintln(w, "Command\tDescription")
+	_, _ = fmt.Fprintln(w, "-f\tConfiguration file location")
+	_, _ = fmt.Fprintln(w, "-v\tVerbose logging")
+	_, _ = fmt.Fprintln(w, "-w\tWatch config file(s) provided by -f for changes")
 
 	_ = w.Flush()
 
 	os.Exit(0)
 }
 
-func handleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
+func handleConfigFileRefresh(
+	fileEventChannel chan filewatcher.FileChangedEvent,
+	listenerCommandChannel chan server.ListenerCommandPacket,
+	filePath string,
+) error {
 	for l := range fileEventChannel {
-		co.LogVerbose(fmt.Sprintf("Config file \"%s\" was changed. Was: %s is: %s", l.FileName, l.FileHashBeforeChange, l.FileHashAfterChange), co.MSGTYPE_WARN)
+		logging.LogVerbose(logging.Info, fmt.Sprintf("Config file %s changed",
+			l.FileName,
+		))
 
-		ser.ClearAllListeners(listenerCommandChannel)
+		server.ClearAllListeners(listenerCommandChannel)
 
-		err := handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, filePath)
+		err := handleListenersFromFile(listenerCommandChannel, filePath)
 		if err != nil {
 			return fmt.Errorf("error handling listeners from file: %w", err)
 		}
@@ -53,20 +63,19 @@ func handleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listener
 	return nil
 }
 
-func handleListenersFromFile(listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
-	// Init...
-	co.LogVerbose("Reading settings file", co.MSGTYPE_INFO)
+func handleListenersFromFile(listenerCommandChannel chan server.ListenerCommandPacket, filePath string) error {
+	logging.LogVerbose(logging.Info, "Reading settings file")
 
-	// Simple sanity checks...
-	if len(filePath) == 0 {
+	if filePath == "" {
 		printHelp()
 	}
+
 	if !strings.HasSuffix(filePath, ".yaml") {
 		printHelp()
 	}
 
 	// Attempt to unmarshal our data from our input file
-	u, err := se.UnmarshalSettingsFile(filePath)
+	u, err := settings.UnmarshalSettingsFile(filePath)
 	if err != nil {
 		return fmt.Errorf("handleListenersFromFile: %w", err)
 	}
@@ -75,12 +84,7 @@ func handleListenersFromFile(listenerCommandChannel chan ser.ListenerCommandPack
 	for _, listener := range u.WebListeners {
 		listener := listener
 
-		go func() {
-			err := ser.EstablishListener(listenerCommandChannel, listenerResponseChannel, listener)
-			if err != nil {
-				log.Printf("error establishing listener: %s", err)
-			}
-		}()
+		go server.EstablishListener(listenerCommandChannel, listener)
 	}
 
 	return nil
@@ -89,64 +93,67 @@ func handleListenersFromFile(listenerCommandChannel chan ser.ListenerCommandPack
 func run() error {
 	fmt.Print(banner)
 
-	// Ensure we have some calling arugments, or something being passed!
+	// Ensure we have some calling arguments, or something being passed!
 	if len(os.Args) <= 1 {
-		fmt.Println("Please use the -h or --help switches for help")
-		os.Exit(1)
+		return fmt.Errorf("please use the -h or --help switches for help")
 	}
 
-	// Handle global switches
-	watchConfigFile := co.ArgSliceContains(os.Args, "-w") // Defines if we expect the config file(s) to dynamically update the configuration of the listeners etc.
-
 	// Handle -h
-	if co.ArgSliceContainsInTerms(os.Args, []string{"-h", "-help", "--h", "--help"}) {
-		printHelp()
-		return nil
+	helpSwitches := []string{"-h", "-help", "--h", "--help"}
+
+	for _, helpSwitch := range helpSwitches {
+		if slices.Contains(os.Args, helpSwitch) {
+			printHelp()
+		}
 	}
 
 	// Handle -l log file location
-	m, params := co.ArgSliceSwitchParameters(os.Args, "-l")
-	if len(params) > 1 {
-		return fmt.Errorf("Only one log file location is supported at the moment")
-	}
-	if m {
-		co.SetLogFileActive(params[0])
+	index := slices.Index(os.Args, "-l")
+	if index != -1 && len(os.Args) > index+1 {
+		err := logging.SetLogFileActive(os.Args[index+1])
+		if err != nil {
+			return fmt.Errorf("error setting log file: %w", err)
+		} // TODO: Need to defer log file close here
 	}
 
 	// Handle -f file inputs
-	m, params = co.ArgSliceSwitchParameters(os.Args, "-f")
-	if m {
-		fileWatcherChannel := make(chan co.FileChangedEvent)
-		listenerCommandChannel := make(chan ser.ListenerCommandPacket)
-		listenerResponseChannel := make(chan ser.ListenerResponse)
+	index = slices.Index(os.Args, "-f")
+	if index == -1 || len(os.Args) <= index+1 {
+		return fmt.Errorf("settings file not provided")
+	}
 
-		// If specified, watch our config file(s), reload them if needed...
-		if watchConfigFile {
-			go func() {
-				err := co.WatchFile(params[0], fileWatcherChannel, false)
-				if err != nil {
-					log.Printf("error watching file: %s\n", err)
-				}
-			}()
-		}
+	configFile := os.Args[index+1]
+	fileWatcherChannel := make(chan filewatcher.FileChangedEvent)
+	listenerCommandChannel := make(chan server.ListenerCommandPacket)
+	listenerResponseChannel := make(chan server.ListenerResponse)
+
+	// If specified, watch our config file(s), reload them if needed...
+	if slices.Contains(os.Args, "-w") {
+		go func() {
+			err := filewatcher.WatchFile(configFile, fileWatcherChannel, false)
+			if err != nil {
+				log.Printf("error watching file: %s\n", err)
+			}
+		}()
 
 		go func() {
-			err := handleConfigFileRefresh(fileWatcherChannel, listenerCommandChannel, listenerResponseChannel, params[0])
+			err := handleConfigFileRefresh(fileWatcherChannel, listenerCommandChannel, configFile)
 			if err != nil {
 				log.Printf("error handling config file refresh: %s\n", err)
 			}
 		}()
+	}
 
-		// Takes first member of slice for now... Will change this when adding multiple file support...
-		err := handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, params[0])
-		if err != nil {
-			return fmt.Errorf("error handling listeners from file: %w", err)
-		}
+	// Takes first member of slice for now... Will change this when adding multiple file support...
+	err := handleListenersFromFile(listenerCommandChannel, configFile)
+	if err != nil {
+		return fmt.Errorf("error handling listeners from file: %w", err)
+	}
 
-		// And output out listeners channel!
-		for listenResponse := range listenerResponseChannel {
-			log.Println(listenResponse)
-		}
+	// And output out listeners channel!
+	// TODO: This does nothing other than block the main goroutine from exiting
+	for listenResponse := range listenerResponseChannel {
+		log.Println(listenResponse)
 	}
 
 	return nil
