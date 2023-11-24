@@ -31,7 +31,6 @@ func printHelp() {
 	_, _ = fmt.Fprintln(w, "Command\tPurpose\tExample")
 	_, _ = fmt.Fprintln(w, "-f\tConfiguration input file location\t./mockapi -f <filepath>")
 	_, _ = fmt.Fprintln(w, "-v\tVerbose logging flag\t./mockapi -f <filepath> -v")
-	_, _ = fmt.Fprintln(w, "-l\tLog file path, mutually exclusive with -v. Discard -v if you're using this.\t./mockapi -f <filepath> -l dir/helloworld.log")
 	_, _ = fmt.Fprintln(w, "-w\tWatch config file(s) provided by -f, re-apply their configuration if they are changed\t./mockapi -f <filepath> -w")
 
 	_ = w.Flush()
