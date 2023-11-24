@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
     "fmt"
@@ -12,7 +12,7 @@ import (
 	se "github.com/nrexception/mockapi/pkg/settings"
 )
 
-func printHelp() {
+func PrintHelp() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 
 	_, _ = fmt.Fprintln(w, "Simple usage example: ./mockapi -f config.yaml")
@@ -27,13 +27,13 @@ func printHelp() {
 	os.Exit(0)
 }
 
-func handleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
+func HandleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
 	for l := range fileEventChannel {
 		co.LogVerbose(fmt.Sprintf("Config file \"%s\" was changed. Was: %s is: %s", l.FileName, l.FileHashBeforeChange, l.FileHashAfterChange), co.MSGTYPE_WARN)
 
 		ser.ClearAllListeners(listenerCommandChannel)
 
-		err := handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, filePath)
+		err := HandleListenersFromFile(listenerCommandChannel, listenerResponseChannel, filePath)
 		if err != nil {
 			return fmt.Errorf("error handling listeners from file: %w", err)
 		}
@@ -42,20 +42,20 @@ func handleConfigFileRefresh(fileEventChannel chan co.FileChangedEvent, listener
 	return nil
 }
 
-func handleListenersFromFile(listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
+func HandleListenersFromFile(listenerCommandChannel chan ser.ListenerCommandPacket, listenerResponseChannel chan ser.ListenerResponse, filePath string) error {
 	co.LogVerbose("Reading settings file", co.MSGTYPE_INFO)
 
 	if len(filePath) == 0 {
-		printHelp()
+		PrintHelp()
 	}
 	if !strings.HasSuffix(filePath, ".yaml") {
-		printHelp()
+		PrintHelp()
 	}
 
 	// Attempt to unmarshal our data from our input file
 	u, err := se.UnmarshalSettingsFile(filePath)
 	if err != nil {
-		return fmt.Errorf("handleListenersFromFile: %w", err)
+		return fmt.Errorf("HandleListenersFromFile: %w", err)
 	}
 
 	// Stand up web listeners and listen

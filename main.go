@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-
+    hand "github.com/nrexception/mockapi/pkg/handlers"
 	co "github.com/nrexception/mockapi/pkg/common"
 	ser "github.com/nrexception/mockapi/pkg/server"
 )
@@ -31,7 +31,7 @@ func run() error {
 
 	// Handle help
 	if co.ArgSliceContainsInTerms(os.Args, []string{"-h", "-help", "--h", "--help"}) {
-		printHelp()
+		hand.PrintHelp()
 		return nil
 	}
 
@@ -55,13 +55,13 @@ func run() error {
 		}
 
 		go func() {
-			err := handleConfigFileRefresh(fileWatcherChannel, listenerCommandChannel, listenerResponseChannel, params[0])
+			err := hand.HandleConfigFileRefresh(fileWatcherChannel, listenerCommandChannel, listenerResponseChannel, params[0])
 			if err != nil {
 				log.Printf("error handling config file refresh: %s\n", err)
 			}
 		}()
 
-		err := handleListenersFromFile(listenerCommandChannel, listenerResponseChannel, params[0])
+		err := hand.HandleListenersFromFile(listenerCommandChannel, listenerResponseChannel, params[0])
 		if err != nil {
 			return fmt.Errorf("error handling listeners from file: %w", err)
 		}
