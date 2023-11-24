@@ -6,6 +6,9 @@ weblisteners:                             # N array of web listeners...
     listenerport: 8080                    # port to listen on
     onconnectkeepalive: true              # whether or not to immediately close connection when response given.
     enabletls: false                      # enable tls on the listener?
+    #certdetails:                         # if enabletls is equal to true, provide the paths to the cert and key...
+    #  certfile: cert.cer
+    #  keyfile: key.cer
     contentbindings:                      # N array of static content bindings.
       - bindingpath: "/"                  # "directory" to bind to.
         responseheaders:                  # N array of headers to pass
@@ -14,11 +17,3 @@ weblisteners:                             # N array of web listeners...
         responsecode: 200                 # Response code to return
         responsebodytype: "inline"        # Type of content to return. use "responsebody" to return static content. Possible values are "static", "proxy", and "file"
         responsebody: "You're in the root" # Body of response to return, can be a file if responsebodytype is set to "file"
-
-      - bindingpath: "/json"
-        responseheaders:
-          - headerkey: "content-type"
-            headervalue: "text/json"
-        responsecode: 200
-        responsebodytype: "file"          
-        responsebody: "build/test.json"
