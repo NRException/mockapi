@@ -59,6 +59,40 @@ make build
 ./mockapi -f <inputfile> -v
 ```
 
+### Formatting Settings
+mockapi uses yaml for its configuration language, it uses a set of simplified parameters to define listeners and their configuration.
+A very simple configuration file for mockapi would look something like below:
+```yaml
+id: "primary_settings"
+schema: "http://json-schema.org/draft-07/schema#"
+description: "Basic Schema borrowed from URL in schema field..."
+weblisteners:                             # N array of web listeners...
+  - listenername: "Primary Listener"      # friendly name of the web listener
+    listenerport: 8080                    # port to listen on
+    onconnectkeepalive: true              # whether or not to immediately close connection when response given.
+    enabletls: false                      # enable tls on the listener?
+    #certdetails:                         # if enabletls is equal to true, provide the paths to the cert and key...
+    #  certfile: cert.cer
+    #  keyfile: key.cer
+    contentbindings:                      # N array of static content bindings.
+      - bindingpath: "/"                  # "directory" to bind to.
+        responseheaders:                  # N array of headers to pass
+          - headerkey: "content-type"     # Header Key
+            headervalue: "text/plain"     # Header Value
+        responsecode: 200                 # Response code to return
+        responsebodytype: "inline"        # Type of content to return. use "responsebody" to return static content. Possible values are "static", "proxy", and "file"
+        responsebody: "You're in the root" # Body of response to return, can be a file if responsebodytype is set to "file"
+
+      - bindingpath: "/json"
+        responseheaders:
+          - headerkey: "content-type"
+            headervalue: "text/json"
+        responsecode: 200
+        responsebodytype: "file"          
+        responsebody: "build/test.json"
+```
+For more information, please refer to the wiki.
+
 ## Help
 Any bug reports, or insight required into unexpected behaviour should be logged with the -v (verbose) switch as this will provide a full context of what the application is doing exactly. eg:
 ```bash

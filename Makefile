@@ -21,9 +21,6 @@ testv:
 testvw:
 	go run main.go -f build/test.yaml -v -w
 
-testvwl:
-	go run main.go -f build/test.yaml -l build/logoutput.log -v -w
-
 build:
 	@echo Building all platforms...
 	GOOS=freebsd GOARCH=386 go build -o=${BUILD_DIR}/bsd/${BINARY_NAME} main.go
